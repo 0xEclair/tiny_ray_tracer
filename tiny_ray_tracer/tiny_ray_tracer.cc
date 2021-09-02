@@ -40,12 +40,13 @@ auto scene_intersect = [](
     const auto& orig, const auto& dir, const auto& spheres, 
     auto& hit, auto& N, auto& material) {
         auto spheres_dist = std::numeric_limits<float>::max();
-        for(size_t i = 0; i<spheres.size(); i++) {
-            if(float dist_i; spheres[i].ray_intersect(orig, dir, dist_i) && dist_i < spheres_dist) {
+        for(auto& sphere : spheres) {
+            float dist_i = 0.0f;
+            if (sphere.ray_intersect(orig, dir, dist_i) && dist_i < spheres_dist) {
                 spheres_dist = dist_i;
                 hit = orig + dir * dist_i;
-                N = (hit - spheres[i].center).normalize();
-                material = spheres[i].material;
+                N = (hit - sphere.center).normalize();
+                material = &sphere.material;
             }
         }
         return spheres_dist < 1000;
@@ -53,17 +54,17 @@ auto scene_intersect = [](
 
 auto cast_ray = [](const auto& orig, const auto& dir, const auto& spheres) {
     geometry::vec3 point, N;
-    Material material;
+    const Material* material;
     if (!scene_intersect(orig,dir,spheres,point,N,material)) {
         return geometry::vec3{ 0.2,0.7,0.8 };
     }
-    return geometry::vec3{ 0.4, 0.4, 0.3 };
+    return (*material).diffuse_color;
 };
 
 auto render(const auto& spheres) {
     constexpr int width = 1024;
     constexpr int height = 768;
-    constexpr float fov = 3.1415926 / 3.0f;
+    constexpr float fov = 3.1415926f / 3.0f;
     std::vector<geometry::vec3> frame_buffer(width * height);
 
     for(size_t j = 0; j<height; j++) {
