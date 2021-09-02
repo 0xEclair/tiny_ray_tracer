@@ -47,11 +47,11 @@ namespace geometry {
 
     template<>
     struct vec<3> {
-        float& operator[](const size_t i) {
+        constexpr float& operator[](const size_t i) {
             assert(i < 3);
             return i == 0 ? x : (i == 1 ? y : z);
         }
-        const float& operator[](const size_t i) const {
+        constexpr const float& operator[](const size_t i) const {
             assert(i < 3);
             return i == 0 ? x : (i == 1 ? y : z);
         }
@@ -84,3 +84,5 @@ namespace geometry {
         return out;
     }
 }
+
+namespace gm = geometry;

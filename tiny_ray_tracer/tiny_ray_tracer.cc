@@ -36,9 +36,9 @@ auto cast_ray = [](const auto& orig, const auto& dir, const auto& sphere) {
 };
 
 auto render(const auto& sphere) {
-    int width = 1024;
-    int height = 768;
-    constexpr float fov = 3.1415926 / 3;
+    constexpr int width = 1024;
+    constexpr int height = 768;
+    constexpr float fov = 3.1415926 / 3.0f;
     std::vector<geometry::vec3> frame_buffer(width * height);
 
     for(size_t j = 0; j<height; j++) {
@@ -62,7 +62,9 @@ auto render(const auto& sphere) {
 }
 
 auto main() -> int {
-    Sphere sphere(geometry::vec3{ -3, 0, -16 }, 2);
+    Sphere sphere(geometry::vec3{ 0, 0, -16 }, 2);
     render(sphere);
+    constexpr auto x = gm::vec3{ 1,2,3 };
+    static_assert(x[0] == 1.0f, "");
     return 0;
 }
