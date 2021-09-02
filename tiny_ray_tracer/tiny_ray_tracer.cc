@@ -6,8 +6,15 @@
 
 struct Material {
     explicit constexpr Material() : diffuse_color() {}
-    explicit constexpr Material(const geometry::vec3& color) :diffuse_color(color) {}
+    explicit constexpr Material(const geometry::vec3& color) : diffuse_color(color) {}
     geometry::vec3 diffuse_color;
+};
+
+struct Light {
+    explicit constexpr Light(const geometry::vec3& p, const float& i) : position(p), intensity(i){}
+
+    geometry::vec3 position;
+    float intensity;
 };
 
 struct Sphere {
@@ -52,16 +59,21 @@ auto scene_intersect = [](
         return spheres_dist < 1000;
 };
 
-auto cast_ray = [](const auto& orig, const auto& dir, const auto& spheres) {
+auto cast_ray = [](const auto& orig, const auto& dir, const auto& spheres, const auto& lights) {
     geometry::vec3 point, N;
     const Material* material;
     if (!scene_intersect(orig,dir,spheres,point,N,material)) {
-        return geometry::vec3{ 0.2,0.7,0.8 };
+        return geometry::vec3{ 0.2f,0.7f,0.8f };
     }
-    return (*material).diffuse_color;
+    float diffuse_light_intensity = 0;
+    for(const auto& light : lights) {
+        auto light_dir = (light.position - point).normalize();
+        diffuse_light_intensity += light.intensity * std::max(0.0f, light_dir * N);
+    }
+    return (*material).diffuse_color * diffuse_light_intensity;
 };
 
-auto render(const auto& spheres) {
+auto render(const auto& spheres, const auto& lights) {
     constexpr int width = 1024;
     constexpr int height = 768;
     constexpr float fov = 3.1415926f / 3.0f;
@@ -72,7 +84,7 @@ auto render(const auto& spheres) {
             float x = (2 * (i + 0.5) / (float)width - 1) * tan(fov / 2.0) * width / (float)height;
             float y = -(2 * (j + 0.5) / (float)height - 1) * tan(fov / 2.0);
             auto dir = geometry::vec3{ x,y,-1 }.normalize();
-            frame_buffer[i + j * width] = cast_ray(geometry::vec3{ 0,0,0 }, dir, spheres);
+            frame_buffer[i + j * width] = cast_ray(geometry::vec3{ 0,0,0 }, dir, spheres, lights);
         }
     }
 
@@ -100,7 +112,8 @@ auto main() -> int {
     // https://developercommunity2.visualstudio.com/t/Cant-declare-constexpr-initializer_list/668718
     //constexpr std::vector spheres({ sphere1, sphere2, sphere3, sphere4 });
     std::vector spheres({ sphere1, sphere2, sphere3, sphere4 });
-    render(spheres);
+    std::vector lights = { Light({0,0,0},0.1) };
+    render(spheres, lights);
 
     // constexpr test field
     {
