@@ -4,8 +4,15 @@
 
 #include "geometry.hpp"
 
+struct Material {
+    explicit constexpr Material() : diffuse_color() {}
+    explicit constexpr Material(const geometry::vec3& color) :diffuse_color(color) {}
+    geometry::vec3 diffuse_color;
+};
+
 struct Sphere {
-    Sphere(const geometry::vec3& c, const float& r): center(c), radius(r) {
+    explicit constexpr Sphere(const geometry::vec3& c, const float& r, const Material& m)
+        : center(c), radius(r), material(m) {
         
     }
 
@@ -23,19 +30,37 @@ struct Sphere {
         if (t0 < 0) return false;
         return true;
     }
+
     geometry::vec3 center;
     float radius;
+    Material material;
 };
 
-auto cast_ray = [](const auto& orig, const auto& dir, const auto& sphere) {
-    auto sphere_dist = std::numeric_limits<float>::max();
-    if(!sphere.ray_intersect(orig,dir,sphere_dist)) {
+auto scene_intersect = [](
+    const auto& orig, const auto& dir, const auto& spheres, 
+    auto& hit, auto& N, auto& material) {
+        auto spheres_dist = std::numeric_limits<float>::max();
+        for(size_t i = 0; i<spheres.size(); i++) {
+            if(float dist_i; spheres[i].ray_intersect(orig, dir, dist_i) && dist_i < spheres_dist) {
+                spheres_dist = dist_i;
+                hit = orig + dir * dist_i;
+                N = (hit - spheres[i].center).normalize();
+                material = spheres[i].material;
+            }
+        }
+        return spheres_dist < 1000;
+};
+
+auto cast_ray = [](const auto& orig, const auto& dir, const auto& spheres) {
+    geometry::vec3 point, N;
+    Material material;
+    if (!scene_intersect(orig,dir,spheres,point,N,material)) {
         return geometry::vec3{ 0.2,0.7,0.8 };
     }
     return geometry::vec3{ 0.4, 0.4, 0.3 };
 };
 
-auto render(const auto& sphere) {
+auto render(const auto& spheres) {
     constexpr int width = 1024;
     constexpr int height = 768;
     constexpr float fov = 3.1415926 / 3.0f;
@@ -46,7 +71,7 @@ auto render(const auto& sphere) {
             float x = (2 * (i + 0.5) / (float)width - 1) * tan(fov / 2.0) * width / (float)height;
             float y = -(2 * (j + 0.5) / (float)height - 1) * tan(fov / 2.0);
             auto dir = geometry::vec3{ x,y,-1 }.normalize();
-            frame_buffer[i + j * width] = cast_ray(geometry::vec3{ 0,0,0 }, dir, sphere);
+            frame_buffer[i + j * width] = cast_ray(geometry::vec3{ 0,0,0 }, dir, spheres);
         }
     }
 
@@ -62,9 +87,24 @@ auto render(const auto& sphere) {
 }
 
 auto main() -> int {
-    Sphere sphere(geometry::vec3{ 0, 0, -16 }, 2);
-    render(sphere);
-    constexpr auto x = gm::vec3{ 1,2,3 };
-    static_assert(x[0] == 1.0f, "");
+    constexpr Material ivory({ 0.4f,0.4f,0.3f });
+    constexpr Material red_rubber({ 0.3f,0.1f,0.1f });
+
+    constexpr Sphere sphere1(geometry::vec3{ -3, 0, -16 }, 2, ivory);
+    constexpr Sphere sphere2(geometry::vec3{ -1.0, -1.5, -12 }, 2, red_rubber);
+    constexpr Sphere sphere3(geometry::vec3{ 1.5, -0.5, -18 }, 3, red_rubber);
+    constexpr Sphere sphere4(geometry::vec3{ 7, 5, -18 }, 4, ivory);
+
+    // visual studio bug
+    // https://developercommunity2.visualstudio.com/t/Cant-declare-constexpr-initializer_list/668718
+    //constexpr std::vector spheres({ sphere1, sphere2, sphere3, sphere4 });
+    std::vector spheres({ sphere1, sphere2, sphere3, sphere4 });
+    render(spheres);
+
+    // constexpr test field
+    {
+        constexpr auto x = gm::vec3{ 1,2,3 };
+        static_assert(x[0] == 1.0f, "hello wrong");
+    }
     return 0;
 }
