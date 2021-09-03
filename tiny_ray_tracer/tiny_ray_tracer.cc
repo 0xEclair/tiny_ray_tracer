@@ -5,9 +5,22 @@
 #include "geometry.hpp"
 
 struct Material {
-    explicit constexpr Material() : diffuse_color() {}
-    explicit constexpr Material(const geometry::vec3& color) : diffuse_color(color) {}
+    explicit constexpr Material()
+        : albedo{1,0},
+          diffuse_color(),
+          specular_exponent() {}
+    explicit constexpr Material(const geometry::vec<2>& a,const geometry::vec3& color, const float& spec)
+        : albedo(a),
+          diffuse_color(color),
+          specular_exponent(spec) {}
+
+    geometry::vec<2> albedo;
     geometry::vec3 diffuse_color;
+    float specular_exponent;  
+};
+
+auto reflect = [](const auto& I, const auto& N) {
+    return I - N * 2.0f * (I * N);
 };
 
 struct Light {
@@ -65,18 +78,19 @@ auto cast_ray = [](const auto& orig, const auto& dir, const auto& spheres, const
     if (!scene_intersect(orig,dir,spheres,point,N,material)) {
         return geometry::vec3{ 0.2f,0.7f,0.8f };
     }
-    float diffuse_light_intensity = 0;
+    float diffuse_light_intensity = 0.0f, specular_light_intensity = 0.0f;
     for(const auto& light : lights) {
         auto light_dir = (light.position - point).normalize();
         diffuse_light_intensity += light.intensity * std::max(0.0f, light_dir * N);
+        specular_light_intensity += std::powf(std::max(0.0f, reflect(light_dir, N) * dir), material->specular_exponent)*light.intensity;
     }
-    return (*material).diffuse_color * diffuse_light_intensity;
+    return material->diffuse_color * diffuse_light_intensity * material->albedo[0] + geometry::vec3{ 1.0f,1.0f,1.0f }*specular_light_intensity * material->albedo[1];
 };
 
 auto render(const auto& spheres, const auto& lights) {
     constexpr int width = 1024;
     constexpr int height = 768;
-    constexpr float fov = 3.1415926f / 2.;
+    constexpr int fov = 3.1415926f / 2.;
     std::vector<geometry::vec3> frame_buffer(width * height);
 
     for(size_t j = 0; j<height; j++) {
@@ -93,6 +107,11 @@ auto render(const auto& spheres, const auto& lights) {
     ofs << "P6\n" << width << " " << height << "\n255\n";
     for(size_t i = 0; i < height * width; ++i) {
         for(size_t j = 0; j<3; j++) {
+            auto& c = frame_buffer[i];
+            float max = std::max(c[0], std::max(c[1], c[2]));
+            if(max > 1) {
+                c = c * (1.0 / max);
+            }
             ofs << (char)(255 * std::max(0.f, std::min(1.f, frame_buffer[i][j])));
         }
     }
@@ -100,8 +119,8 @@ auto render(const auto& spheres, const auto& lights) {
 }
 
 auto main() -> int {
-    constexpr Material ivory({ 0.4f,0.4f,0.3f });
-    constexpr Material red_rubber({ 0.3f,0.1f,0.1f });
+    constexpr Material ivory({0.6,0.3}, { 0.4f, 0.4f, 0.3f }, 50.0);
+    constexpr Material red_rubber({0.9,0.1}, { 0.3f, 0.1f, 0.1f },10.0);
 
     constexpr Sphere sphere1(geometry::vec3{ -3, 0, -16 }, 2, ivory);
     constexpr Sphere sphere2(geometry::vec3{ -1.0, -1.5, -12 }, 2, red_rubber);
@@ -112,7 +131,11 @@ auto main() -> int {
     // https://developercommunity2.visualstudio.com/t/Cant-declare-constexpr-initializer_list/668718
     //constexpr std::vector spheres({ sphere1, sphere2, sphere3, sphere4 });
     std::vector spheres({ sphere1, sphere2, sphere3, sphere4 });
-    std::vector lights = { Light({-20,20,20},1.5) };
+    std::vector lights = {
+        Light({-20,20,20},1.5),
+        Light({30.0,50.0,-25},1.8),
+        Light({30.0,20.0,30.0},1.7)
+    };
     render(spheres, lights);
 
     // constexpr test field
