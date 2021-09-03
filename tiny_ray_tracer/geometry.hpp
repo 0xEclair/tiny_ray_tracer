@@ -35,13 +35,26 @@ namespace geometry {
         return ret;
     }
 
-    template<size_t DIM> vec<DIM> operator+(vec<DIM> lhs, const vec<DIM>& rhs) {
+    template<size_t DIM>
+    vec<DIM> operator+(vec<DIM> lhs, const vec<DIM>& rhs) {
         for (size_t i = DIM; i--; lhs[i] += rhs[i]);
         return lhs;
     }
 
-    template<size_t DIM> vec<DIM> operator-(vec<DIM> lhs, const vec<DIM>& rhs) {
+    template<size_t DIM>
+    vec<DIM> operator-(vec<DIM> lhs, const vec<DIM>& rhs) {
         for (size_t i = DIM; i--; lhs[i] -= rhs[i]);
+        return lhs;
+    }
+
+    auto& operator+=(auto& lhs, const auto& rhs) {
+        for (size_t i = lhs.size(); i--; lhs[i] += rhs[i]);
+        return lhs;
+    }
+
+    template<size_t DIM>
+    vec<DIM> operator/=(vec<DIM>& lhs, const float rhs) {
+        for (size_t i = DIM; i--; lhs[i] /= rhs);
         return lhs;
     }
 
@@ -62,6 +75,9 @@ namespace geometry {
             *this = (*this) * (l / norm());
             return *this;
         }
+        constexpr auto size() -> size_t {
+            return 3;
+        }
         float x = 0, y = 0, z = 0;
     };
 
@@ -81,6 +97,7 @@ namespace geometry {
         for (size_t i = 0; i < DIM; i++) {
             out << v[i] << " ";
         }
+        out << '\n';
         return out;
     }
 }
