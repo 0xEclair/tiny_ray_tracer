@@ -58,14 +58,14 @@ struct Sphere {
 
 auto scene_intersect = [](
     const auto& orig, const auto& dir, const auto& spheres, 
-    auto& hit, auto& N, auto& material) {
+    auto& intersection, auto& normal_vector, auto& material) {
         auto spheres_dist = std::numeric_limits<float>::max();
         for(auto& sphere : spheres) {
             float dist_i = 0.0f;
             if (sphere.ray_intersect(orig, dir, dist_i) && dist_i < spheres_dist) {
                 spheres_dist = dist_i;
-                hit = orig + dir * dist_i;
-                N = (hit - sphere.center).normalize();
+                intersection = orig + dir * dist_i;
+                normal_vector = (intersection - sphere.center).normalize();
                 material = &sphere.material;
             }
         }
@@ -73,16 +73,16 @@ auto scene_intersect = [](
 };
 
 auto cast_ray = [](const auto& orig, const auto& dir, const auto& spheres, const auto& lights) {
-    geometry::vec3 point, N;
+    geometry::vec3 intersection, normal_vector;
     const Material* material;
-    if (!scene_intersect(orig,dir,spheres,point,N,material)) {
+    if (!scene_intersect(orig,dir,spheres,intersection,normal_vector,material)) {
         return geometry::vec3{ 0.2f,0.7f,0.8f };
     }
     float diffuse_light_intensity = 0.0f, specular_light_intensity = 0.0f;
     for(const auto& light : lights) {
-        auto light_dir = (light.position - point).normalize();
-        diffuse_light_intensity += light.intensity * std::max(0.0f, light_dir * N);
-        specular_light_intensity += std::powf(std::max(0.0f, reflect(light_dir, N) * dir), material->specular_exponent)*light.intensity;
+        auto light_dir = (light.position - intersection).normalize();
+        diffuse_light_intensity += light.intensity * std::max(0.0f, light_dir * normal_vector);
+        specular_light_intensity += std::powf(std::max(0.0f, reflect(light_dir, normal_vector) * dir), material->specular_exponent)*light.intensity;
     }
     return material->diffuse_color * diffuse_light_intensity * material->albedo[0] + geometry::vec3{ 1.0f,1.0f,1.0f }*specular_light_intensity * material->albedo[1];
 };
