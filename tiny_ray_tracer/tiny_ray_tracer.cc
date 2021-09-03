@@ -76,7 +76,7 @@ auto cast_ray = [](const auto& orig, const auto& dir, const auto& spheres, const
 auto render(const auto& spheres, const auto& lights) {
     constexpr int width = 1024;
     constexpr int height = 768;
-    constexpr float fov = 3.1415926f / 3.0f;
+    constexpr float fov = 3.1415926f / 2.;
     std::vector<geometry::vec3> frame_buffer(width * height);
 
     for(size_t j = 0; j<height; j++) {
@@ -89,7 +89,7 @@ auto render(const auto& spheres, const auto& lights) {
     }
 
     std::ofstream ofs;
-    ofs.open("./out.ppm");
+    ofs.open("./out.ppm", std::ofstream::out | std::ofstream::binary);
     ofs << "P6\n" << width << " " << height << "\n255\n";
     for(size_t i = 0; i < height * width; ++i) {
         for(size_t j = 0; j<3; j++) {
@@ -112,7 +112,7 @@ auto main() -> int {
     // https://developercommunity2.visualstudio.com/t/Cant-declare-constexpr-initializer_list/668718
     //constexpr std::vector spheres({ sphere1, sphere2, sphere3, sphere4 });
     std::vector spheres({ sphere1, sphere2, sphere3, sphere4 });
-    std::vector lights = { Light({0,0,0},0.1) };
+    std::vector lights = { Light({-20,20,20},1.5) };
     render(spheres, lights);
 
     // constexpr test field
