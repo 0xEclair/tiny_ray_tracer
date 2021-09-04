@@ -81,6 +81,17 @@ auto cast_ray = [](const auto& orig, const auto& dir, const auto& spheres, const
     float diffuse_light_intensity = 0.0f, specular_light_intensity = 0.0f;
     for(const auto& light : lights) {
         auto light_dir = (light.position - intersection).normalize();
+        auto light_distance = light_dir.norm();
+        auto shadow_orig = light_dir * normal_vector < 0 ? 
+            intersection - normal_vector * 1e-3 :
+            intersection + normal_vector * 1e-3;
+        geometry::vec3 shadow_intersection, shadow_nv;
+        const Material* tmpmaterial;
+        if(scene_intersect(shadow_orig, light_dir, spheres, shadow_intersection, shadow_nv, tmpmaterial) && 
+           (shadow_intersection - shadow_orig).norm() < light_distance) {
+            // shadow_vector = shadow_intersection - shadow_orig.
+            continue;
+        }
         diffuse_light_intensity += light.intensity * std::max(0.0f, light_dir * normal_vector);
         specular_light_intensity += std::powf(std::max(0.0f, reflect(light_dir, normal_vector) * dir), material->specular_exponent)*light.intensity;
     }
