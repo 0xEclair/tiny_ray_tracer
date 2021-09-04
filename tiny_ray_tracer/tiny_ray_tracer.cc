@@ -87,7 +87,7 @@ auto cast_ray = [](const auto& orig, const auto& dir,
     float diffuse_light_intensity = 0.0f, specular_light_intensity = 0.0f;
     for(const auto& light : lights) {
         auto light_dir = (light.position - intersection).normalize();
-        auto light_distance = light_dir.norm();
+        auto light_distance = (light.position - intersection).norm();
         auto shadow_orig = light_dir * normal_vector < 0 ? 
             intersection - normal_vector * 1e-3:
             intersection + normal_vector * 1e-3;
@@ -143,7 +143,7 @@ auto render(const auto& spheres, const auto& lights) {
 auto main() -> int {
     constexpr Material ivory({0.6,0.3,0.1}, { 0.4f, 0.4f, 0.3f }, 50.0);
     constexpr Material red_rubber({0.9,0.1,0.0}, { 0.3f, 0.1f, 0.1f },10.0);
-    constexpr Material mirror({0.0,10.0,0.8}, { 1.0,1.0,1.0 },1425);
+    constexpr Material mirror({0.0,10.0,0.8}, { 1.0,1.0,1.0 },1425.0);
 
     constexpr Sphere sphere1(geometry::vec3{ -3, 0, -16 }, 2, ivory);
     constexpr Sphere sphere2(geometry::vec3{ -1.0, -1.5, -12 }, 2, mirror);
