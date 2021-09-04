@@ -6,21 +6,17 @@
 
 struct Material {
     explicit constexpr Material()
-        : albedo{1,0},
+        : albedo{1,0,0},
           diffuse_color(),
           specular_exponent() {}
-    explicit constexpr Material(const geometry::vec<2>& a,const geometry::vec3& color, const float& spec)
+    explicit constexpr Material(const geometry::vec3& a,const geometry::vec3& color, const float& spec)
         : albedo(a),
           diffuse_color(color),
           specular_exponent(spec) {}
 
-    geometry::vec<2> albedo;
+    geometry::vec3 albedo;
     geometry::vec3 diffuse_color;
     float specular_exponent;  
-};
-
-auto reflect = [](const auto& I, const auto& N) {
-    return I - N * 2.0f * (I * N);
 };
 
 struct Light {
@@ -72,30 +68,45 @@ auto scene_intersect = [](
         return spheres_dist < 1000;
 };
 
-auto cast_ray = [](const auto& orig, const auto& dir, const auto& spheres, const auto& lights) {
+auto cast_ray = [](const auto& orig, const auto& dir, 
+                   const auto& spheres, const auto& lights,
+                   size_t depth=0) {
     geometry::vec3 intersection, normal_vector;
     const Material* material;
-    if (!scene_intersect(orig,dir,spheres,intersection,normal_vector,material)) {
+    if (depth > 4 || !scene_intersect(orig,dir,spheres,intersection,normal_vector,material)) {
         return geometry::vec3{ 0.2f,0.7f,0.8f };
     }
+    auto reflect = [](const auto& I, const auto& N) {
+        return I - N * 2.0f * (I * N);
+    };
+    auto reflect_direction = reflect(dir, normal_vector).normalize();
+    auto reflect_orig = reflect_direction * normal_vector < 0 ?
+        intersection - normal_vector * 1e-3:
+        intersection + normal_vector * 1e-3;
+    auto reflect_color = cast_ray(reflect_orig, reflect_direction, spheres, lights, depth + 1);
     float diffuse_light_intensity = 0.0f, specular_light_intensity = 0.0f;
     for(const auto& light : lights) {
         auto light_dir = (light.position - intersection).normalize();
         auto light_distance = light_dir.norm();
         auto shadow_orig = light_dir * normal_vector < 0 ? 
-            intersection - normal_vector * 1e-3 :
+            intersection - normal_vector * 1e-3:
             intersection + normal_vector * 1e-3;
         geometry::vec3 shadow_intersection, shadow_nv;
         const Material* tmpmaterial;
         if(scene_intersect(shadow_orig, light_dir, spheres, shadow_intersection, shadow_nv, tmpmaterial) && 
            (shadow_intersection - shadow_orig).norm() < light_distance) {
             // shadow_vector = shadow_intersection - shadow_orig.
+            // skip the light, the pixel would be dark, making the same effect as shadows.
             continue;
         }
+
         diffuse_light_intensity += light.intensity * std::max(0.0f, light_dir * normal_vector);
         specular_light_intensity += std::powf(std::max(0.0f, reflect(light_dir, normal_vector) * dir), material->specular_exponent)*light.intensity;
     }
-    return material->diffuse_color * diffuse_light_intensity * material->albedo[0] + geometry::vec3{ 1.0f,1.0f,1.0f }*specular_light_intensity * material->albedo[1];
+    return material->diffuse_color * 
+           diffuse_light_intensity * material->albedo[0] + 
+           geometry::vec3{ 1.0f,1.0f,1.0f } * specular_light_intensity * material->albedo[1] + 
+           reflect_color*material->albedo[2];
 };
 
 auto render(const auto& spheres, const auto& lights) {
@@ -130,13 +141,14 @@ auto render(const auto& spheres, const auto& lights) {
 }
 
 auto main() -> int {
-    constexpr Material ivory({0.6,0.3}, { 0.4f, 0.4f, 0.3f }, 50.0);
-    constexpr Material red_rubber({0.9,0.1}, { 0.3f, 0.1f, 0.1f },10.0);
+    constexpr Material ivory({0.6,0.3,0.1}, { 0.4f, 0.4f, 0.3f }, 50.0);
+    constexpr Material red_rubber({0.9,0.1,0.0}, { 0.3f, 0.1f, 0.1f },10.0);
+    constexpr Material mirror({0.0,10.0,0.8}, { 1.0,1.0,1.0 },1425);
 
     constexpr Sphere sphere1(geometry::vec3{ -3, 0, -16 }, 2, ivory);
-    constexpr Sphere sphere2(geometry::vec3{ -1.0, -1.5, -12 }, 2, red_rubber);
+    constexpr Sphere sphere2(geometry::vec3{ -1.0, -1.5, -12 }, 2, mirror);
     constexpr Sphere sphere3(geometry::vec3{ 1.5, -0.5, -18 }, 3, red_rubber);
-    constexpr Sphere sphere4(geometry::vec3{ 7, 5, -18 }, 4, ivory);
+    constexpr Sphere sphere4(geometry::vec3{ 7, 5, -18 }, 4, mirror);
 
     // visual studio bug
     // https://developercommunity2.visualstudio.com/t/Cant-declare-constexpr-initializer_list/668718
