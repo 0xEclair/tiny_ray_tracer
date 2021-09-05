@@ -65,7 +65,22 @@ auto scene_intersect = [](
         }
     }
 
-    return spheres_dist < 1000;
+    float checker_board_dist = std::numeric_limits<float>::max();
+    if (std::fabs(dir.y) > 1e-3) {
+        float d = -(orig.y + 4) / dir.y;
+        auto pt = orig + dir * d;
+        if (d > 0 && std::fabs(pt.x) < 10 && pt.z<-10 && pt.z>-30 && d < spheres_dist) {
+            checker_board_dist = d;
+            intersection = pt;
+            normal_vector = { 0,1.0f,0 };
+            constinit static Material white = Material({ 1,0,0,0 }, geometry::vec3{ 1,1,1 } *0.3, 0, 1);
+            constinit static Material yellow = Material({ 1,0,0,0 }, geometry::vec3{ 1,0.7,0.3 } *0.3, 0, 1);
+            material = ((int(0.5 * intersection.x + 1000) + int(0.5 * intersection.z)) & 1) ?
+                &white :
+                &yellow;
+        }
+    }
+    return std::min(spheres_dist, checker_board_dist) < 1000;
 };
 
 auto cast_ray = [](const auto& orig, const auto& dir, 

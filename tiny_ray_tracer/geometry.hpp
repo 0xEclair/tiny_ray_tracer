@@ -22,7 +22,7 @@ namespace geometry {
     };
 
     template<size_t DIM>
-    vec<DIM> operator*(const vec<DIM>& lhs, const float rhs) {
+    constexpr vec<DIM> operator*(const vec<DIM>& lhs, const float rhs) {
         vec<DIM> ret;
         for (size_t i = DIM; i--; ret[i] = lhs[i] * rhs);
         return ret;
