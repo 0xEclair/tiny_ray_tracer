@@ -35,14 +35,22 @@ namespace geometry {
         return ret;
     }
 
-    template<size_t DIM> vec<DIM> operator+(vec<DIM> lhs, const vec<DIM>& rhs) {
+    template<size_t DIM>
+    vec<DIM> operator+(vec<DIM> lhs, const vec<DIM>& rhs) {
         for (size_t i = DIM; i--; lhs[i] += rhs[i]);
         return lhs;
     }
 
-    template<size_t DIM> vec<DIM> operator-(vec<DIM> lhs, const vec<DIM>& rhs) {
+    template<size_t DIM>
+    vec<DIM> operator-(vec<DIM> lhs, const vec<DIM>& rhs) {
         for (size_t i = DIM; i--; lhs[i] -= rhs[i]);
         return lhs;
+    }
+
+    template<size_t DIM>
+    vec<DIM> operator-(vec<DIM> operand) {
+        for (size_t i = DIM; i--; operand[i] = -operand[i]);
+        return operand;
     }
 
     template<>

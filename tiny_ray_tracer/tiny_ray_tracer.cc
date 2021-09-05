@@ -6,17 +6,18 @@
 
 struct Material {
     explicit constexpr Material()
-        : albedo{1,0,0},
-          diffuse_color(),
+        : diffuse_color(),
           specular_exponent() {}
-    explicit constexpr Material(const geometry::vec3& a,const geometry::vec3& color, const float& spec)
+    explicit constexpr Material(const geometry::vec4& a,const geometry::vec3& color, const float& spec, const float& r)
         : albedo(a),
           diffuse_color(color),
-          specular_exponent(spec) {}
+          specular_exponent(spec),
+          refractive_index(r) {}
 
-    geometry::vec3 albedo;
+    geometry::vec4 albedo = { 1,0,0,0 };
     geometry::vec3 diffuse_color;
-    float specular_exponent;  
+    float specular_exponent;
+    float refractive_index = 1;
 };
 
 struct Light {
@@ -79,11 +80,32 @@ auto cast_ray = [](const auto& orig, const auto& dir,
     auto reflect = [](const auto& I, const auto& N) {
         return I - N * 2.0f * (I * N);
     };
+    auto refract = [](const auto& I, const auto& N, const float& refractive_index) {
+        float cosi = -std::max(-1.0f, std::min(1.0f, I * N));
+        float etai = 1, etat = refractive_index;
+        auto n = N;
+        if(cosi < 0) {
+            cosi = -cosi;
+            std::swap(etai, etat);
+            n = -N;
+        }
+        float eta = etai / etat;
+        float k = 1 - eta * eta * (1 - cosi * cosi);
+        return k < 0 ? 
+            geometry::vec3{ 0,0,0 } :
+            I * eta + n * (eta * cosi - std::sqrtf(k));
+    };
     auto reflect_direction = reflect(dir, normal_vector).normalize();
+    auto refract_direction = refract(dir, normal_vector, material->refractive_index).normalize();
     auto reflect_orig = reflect_direction * normal_vector < 0 ?
         intersection - normal_vector * 1e-3:
         intersection + normal_vector * 1e-3;
+    auto refract_orig = refract_direction * normal_vector < 0 ?
+        intersection - normal_vector * 1e-3 :
+        intersection + normal_vector * 1e-3;
+
     auto reflect_color = cast_ray(reflect_orig, reflect_direction, spheres, lights, depth + 1);
+    auto refract_color = cast_ray(refract_orig, refract_direction, spheres, lights, depth + 1);
     float diffuse_light_intensity = 0.0f, specular_light_intensity = 0.0f;
     for(const auto& light : lights) {
         auto light_dir = (light.position - intersection).normalize();
@@ -106,7 +128,8 @@ auto cast_ray = [](const auto& orig, const auto& dir,
     return material->diffuse_color * 
            diffuse_light_intensity * material->albedo[0] + 
            geometry::vec3{ 1.0f,1.0f,1.0f } * specular_light_intensity * material->albedo[1] + 
-           reflect_color*material->albedo[2];
+           reflect_color*material->albedo[2] + 
+           refract_color*material->albedo[3];
 };
 
 auto render(const auto& spheres, const auto& lights) {
@@ -141,12 +164,13 @@ auto render(const auto& spheres, const auto& lights) {
 }
 
 auto main() -> int {
-    constexpr Material ivory({0.6,0.3,0.1}, { 0.4f, 0.4f, 0.3f }, 50.0);
-    constexpr Material red_rubber({0.9,0.1,0.0}, { 0.3f, 0.1f, 0.1f },10.0);
-    constexpr Material mirror({0.0,10.0,0.8}, { 1.0,1.0,1.0 },1425.0);
+    constexpr Material ivory({0.6,0.3,0.1,0.0}, { 0.4f, 0.4f, 0.3f }, 50.0 ,1.0f);
+    constexpr Material red_rubber({0.9,0.1,0.0, 0.0}, { 0.3f, 0.1f, 0.1f },10.0, 1.0f);
+    constexpr Material mirror({0.0,10.0,0.8, 0.0}, { 1.0,1.0,1.0 },1425.0,1.0f);
+    constexpr Material glass({ 0.0,0.5,0.1,0.8 }, { 0.6f,0.7f,0.8f }, 125.0f, 1.5);
 
     constexpr Sphere sphere1(geometry::vec3{ -3, 0, -16 }, 2, ivory);
-    constexpr Sphere sphere2(geometry::vec3{ -1.0, -1.5, -12 }, 2, mirror);
+    constexpr Sphere sphere2(geometry::vec3{ -1.0, -1.5, -12 }, 2, glass);
     constexpr Sphere sphere3(geometry::vec3{ 1.5, -0.5, -18 }, 3, red_rubber);
     constexpr Sphere sphere4(geometry::vec3{ 7, 5, -18 }, 4, mirror);
 
