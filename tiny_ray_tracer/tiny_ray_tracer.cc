@@ -5,9 +5,7 @@
 #include "geometry.hpp"
 
 struct Material {
-    explicit constexpr Material()
-        : diffuse_color(),
-          specular_exponent() {}
+    explicit constexpr Material() {}
     explicit constexpr Material(const geometry::vec4& a,const geometry::vec3& color, const float& spec, const float& r)
         : albedo(a),
           diffuse_color(color),
@@ -15,9 +13,9 @@ struct Material {
           refractive_index(r) {}
 
     geometry::vec4 albedo = { 1,0,0,0 };
-    geometry::vec3 diffuse_color;
-    float specular_exponent;
-    float refractive_index = 1;
+    geometry::vec3 diffuse_color = {};
+    float specular_exponent = {};
+    float refractive_index = 1.0f;
 };
 
 struct Light {
@@ -56,17 +54,18 @@ struct Sphere {
 auto scene_intersect = [](
     const auto& orig, const auto& dir, const auto& spheres, 
     auto& intersection, auto& normal_vector, auto& material) {
-        auto spheres_dist = std::numeric_limits<float>::max();
-        for(auto& sphere : spheres) {
-            float dist_i = 0.0f;
-            if (sphere.ray_intersect(orig, dir, dist_i) && dist_i < spheres_dist) {
-                spheres_dist = dist_i;
-                intersection = orig + dir * dist_i;
-                normal_vector = (intersection - sphere.center).normalize();
-                material = &sphere.material;
-            }
+    auto spheres_dist = std::numeric_limits<float>::max();
+    for(auto& sphere : spheres) {
+        float dist_i = 0;
+        if (sphere.ray_intersect(orig, dir, dist_i) && dist_i < spheres_dist) {
+            spheres_dist = dist_i;
+            intersection = orig + dir * dist_i;
+            normal_vector = (intersection - sphere.center).normalize();
+            material = &sphere.material;
         }
-        return spheres_dist < 1000;
+    }
+
+    return spheres_dist < 1000;
 };
 
 auto cast_ray = [](const auto& orig, const auto& dir, 
@@ -98,15 +97,15 @@ auto cast_ray = [](const auto& orig, const auto& dir,
     auto reflect_direction = reflect(dir, normal_vector).normalize();
     auto refract_direction = refract(dir, normal_vector, material->refractive_index).normalize();
     auto reflect_orig = reflect_direction * normal_vector < 0 ?
-        intersection - normal_vector * 1e-3:
-        intersection + normal_vector * 1e-3;
+        intersection - normal_vector * 1e-3f:
+        intersection + normal_vector * 1e-3f;
     auto refract_orig = refract_direction * normal_vector < 0 ?
-        intersection - normal_vector * 1e-3 :
-        intersection + normal_vector * 1e-3;
+        intersection - normal_vector * 1e-3f :
+        intersection + normal_vector * 1e-3f;
 
     auto reflect_color = cast_ray(reflect_orig, reflect_direction, spheres, lights, depth + 1);
     auto refract_color = cast_ray(refract_orig, refract_direction, spheres, lights, depth + 1);
-    float diffuse_light_intensity = 0.0f, specular_light_intensity = 0.0f;
+    float diffuse_light_intensity = 0, specular_light_intensity = 0;
     for(const auto& light : lights) {
         auto light_dir = (light.position - intersection).normalize();
         auto light_distance = (light.position - intersection).norm();
@@ -157,20 +156,20 @@ auto render(const auto& spheres, const auto& lights) {
             if(max > 1) {
                 c = c * (1.0 / max);
             }
-            ofs << (char)(255 * std::max(0.f, std::min(1.f, frame_buffer[i][j])));
+            ofs << (char)(255 * std::max(0.0f, std::min(1.f, frame_buffer[i][j])));
         }
     }
     ofs.close();
 }
 
 auto main() -> int {
-    constexpr Material ivory({0.6,0.3,0.1,0.0}, { 0.4f, 0.4f, 0.3f }, 50.0 ,1.0f);
-    constexpr Material red_rubber({0.9,0.1,0.0, 0.0}, { 0.3f, 0.1f, 0.1f },10.0, 1.0f);
-    constexpr Material mirror({0.0,10.0,0.8, 0.0}, { 1.0,1.0,1.0 },1425.0,1.0f);
-    constexpr Material glass({ 0.0,0.5,0.1,0.8 }, { 0.6f,0.7f,0.8f }, 125.0f, 1.5);
+    constexpr Material ivory({0.6,0.3,0.1,0}, { 0.4f, 0.4f, 0.3f }, 50.0f ,1.0f);
+    constexpr Material red_rubber({0.9,0.1,0, 0}, { 0.3f, 0.1f, 0.1f },10.0f, 1.0f);
+    constexpr Material mirror({0,10.0,0.8, 0}, { 1.0f,1.0f,1.0f },1425.0f,1.0f);
+    constexpr Material glass({ 0,0.5,0.1,0.8 }, { 0.6f,0.7f,0.8f }, 125.0f, 1.5f);
 
     constexpr Sphere sphere1(geometry::vec3{ -3, 0, -16 }, 2, ivory);
-    constexpr Sphere sphere2(geometry::vec3{ -1.0, -1.5, -12 }, 2, glass);
+    constexpr Sphere sphere2(geometry::vec3{ -1, -1.5, -12 }, 2, glass);
     constexpr Sphere sphere3(geometry::vec3{ 1.5, -0.5, -18 }, 3, red_rubber);
     constexpr Sphere sphere4(geometry::vec3{ 7, 5, -18 }, 4, mirror);
 
