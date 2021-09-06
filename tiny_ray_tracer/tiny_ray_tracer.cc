@@ -78,6 +78,16 @@ auto scene_intersect = [](
             material = ((int(0.5 * intersection.x + 1000) + int(0.5 * intersection.z)) & 1) ?
                 &white :
                 &yellow;
+            // I can't understand why the code below can't get a right image.
+            //static Material m = Material();
+            //m = Material();
+            //if(((int(0.5 * intersection.x + 1000) + int(0.5 * intersection.z)) & 1)) {
+            //    m.diffuse_color = geometry::vec3{ 1,1,1 } * 0.3;
+            //}
+            //else {
+            //    m.diffuse_color = geometry::vec3{ 1,0.7,0.3 } * 0.3;
+            //}
+            //material = &m;
         }
     }
     return std::min(spheres_dist, checker_board_dist) < 1000;
